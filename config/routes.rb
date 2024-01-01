@@ -1,4 +1,5 @@
 Rails.application.routes.draw do
+  resources :coins
   resources :trades
   resources :portfolios
   resources :users
