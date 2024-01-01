@@ -16,11 +16,30 @@ class TradesController < ApplicationController
   # POST /trades
   def create
     @trade = Trade.new(trade_params)
-
-    if @trade.save
-      render json: @trade, status: :created, location: @trade
+    user = User.find_by_id(trade_params[:user_id])
+    portfolio = user.portfolios.find_by_id(trade_params[:portfolio_id])
+    coin = user.portfolios.first.coins.where(coin_id:trade_params[:coin_id])
+    portfolio.current_balance = portfolio.current_balance - (trade_params[:quantity] * trade_params[:price])
+    
+    if @trade.save && portfolio.current_balance > 0
+      if coin.count > 0  
+        # portfolio.save
+        coin[0].quantity = coin[0].quantity + trade_params[:quantity]
+        coin[0].save
+      else 
+        Coin.create(:coin_name => trade_params[:coin_name], :coin_id => trade_params[:coin_id], :average_price => trade_params[:price], :quantity => trade_params[:quantity], :user_id => trade_params[:user_id], :portfolio_id => trade_params[:portfolio_id], :image => trade_params[:image])
+      end
+      portfolio.save
+      user = User.find_by_id(trade_params[:user_id])
+      user_json = user.to_json(:include => [
+        :portfolios, :trades, :coins])
+      # render json: @trade, status: :created, location: @trade
+      render json: {
+        user: user_json
+      }
     else
-      render json: @trade.errors, status: :unprocessable_entity
+      # render json: @trade.errors, status: :unprocessable_entity
+      render json: {error: "You don't have enough buying power for this order."}
     end
   end
 
